@@ -16,6 +16,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Find a unit by external ID
+func findUnitByExternalId(unitList *dto.UnitList, externalId string) (*dto.Unit, error) {
+	for _, unit := range unitList.Items {
+		if unit.ExternalId == externalId {
+			return &unit, nil
+		}
+	}
+	return nil, fmt.Errorf("unit not found with ExternalId: %s", externalId)
+}
+
 func main() {
 	// Load environment variables
 	err := godotenv.Load(".env")
@@ -84,6 +94,15 @@ func main() {
 	}
 
 	fmt.Println("Filtered Time Series Count:", len(filteredTsList.Items))
+
+	// Fetch the unit catalog
+	fmt.Println("\n### Testing fetching the Unit catalog")
+	unitList, err := api.ListUnits(project, accessToken, baseURL)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println("Unit Count:", len(unitList.Items))
 
 	// Get many data points (performance test)
 	fmt.Println("\n### Data Points (performance test)")
@@ -165,6 +184,11 @@ func main() {
 	}
 	fmt.Println("Data Points Count:", len(values))
 	fmt.Printf("Time taken: %s\n", elapsed)
+	unit, err := findUnitByExternalId(&unitList, dps.UnitExternalId)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
 
 	// Plot the data
 	fig := &grob.Fig{
@@ -196,7 +220,7 @@ func main() {
 			},
 			Yaxis: &grob.LayoutYaxis{
 				Title: &grob.LayoutYaxisTitle{
-					Text: dps.Unit,
+					Text: fmt.Sprintf("%s [%s]", unit.Quantity, unit.Symbol),
 				},
 			},
 			Spikedistance: -1,
