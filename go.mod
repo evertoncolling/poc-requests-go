@@ -1,4 +1,4 @@
-module poc-requests-go
+module github.com/evertoncolling/poc-requests-go
 
 go 1.21.4
 

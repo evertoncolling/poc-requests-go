@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"poc-requests-go/pkg/dto"
+
+	"github.com/evertoncolling/poc-requests-go/pkg/dto"
 
 	"google.golang.org/protobuf/proto"
 )

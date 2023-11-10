@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"poc-requests-go/pkg/api"
-	"poc-requests-go/pkg/dto"
+	"github.com/evertoncolling/poc-requests-go/pkg/api"
+	"github.com/evertoncolling/poc-requests-go/pkg/dto"
 
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/confidential"
 	grob "github.com/MetalBlueberry/go-plotly/graph_objects"
