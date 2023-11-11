@@ -9,26 +9,21 @@ import (
 	"github.com/evertoncolling/poc-requests-go/pkg/dto"
 )
 
-func ListUnits(
-	project string,
-	token string,
-	baseURL string,
-) (dto.UnitList, error) {
-	endpoint := fmt.Sprintf("/api/v1/projects/%s/units", project)
-	url := baseURL + endpoint
+func (u *Units) List() (dto.UnitList, error) {
+	endpoint := fmt.Sprintf("/api/v1/projects/%s/units", u.Client.ClientConfig.Project)
+	url := u.Client.BaseURL + endpoint
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return dto.UnitList{}, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("cdf-version", "beta")
+	for key, value := range u.Client.Headers {
+		req.Header.Set(key, value)
+	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return dto.UnitList{}, err
 	}
