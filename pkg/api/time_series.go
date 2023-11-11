@@ -13,10 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ListTimeSeries(
-	project string,
-	token string,
-	baseURL string,
+func (t *TimeSeries) List(
 	limit int,
 	includeMetadata bool,
 	cursor string,
@@ -35,23 +32,22 @@ func ListTimeSeries(
 	queryParams["rootAssetIds"] = rootAssetIDs
 	queryParams["externalIdPrefix"] = externalIDPrefix
 
-	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries", project)
+	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries", t.Client.ClientConfig.Project)
 
 	// Build the URL with query parameters
-	url := baseURL + endpoint + "?" + buildQueryParams(queryParams)
+	url := t.Client.BaseURL + endpoint + "?" + buildQueryParams(queryParams)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return dto.TimeSeriesList{}, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("cdf-version", "beta")
+	for key, value := range t.Client.Headers {
+		req.Header.Set(key, value)
+	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return dto.TimeSeriesList{}, err
 	}
@@ -74,10 +70,7 @@ func ListTimeSeries(
 	return tsList, nil
 }
 
-func FilterTimeSeries(
-	project string,
-	token string,
-	baseURL string,
+func (t *TimeSeries) Filter(
 	filter *dto.TimeSeriesFilter,
 	advancedFilter map[string]interface{},
 	limit int,
@@ -85,8 +78,8 @@ func FilterTimeSeries(
 	partition string,
 	sort []map[string]interface{},
 ) (dto.TimeSeriesList, error) {
-	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/list", project)
-	url := baseURL + endpoint
+	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/list", t.Client.ClientConfig.Project)
+	url := t.Client.BaseURL + endpoint
 
 	body := map[string]interface{}{
 		"filter":         filter,
@@ -108,13 +101,12 @@ func FilterTimeSeries(
 		return dto.TimeSeriesList{}, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("cdf-version", "beta")
+	for key, value := range t.Client.Headers {
+		req.Header.Set(key, value)
+	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return dto.TimeSeriesList{}, err
 	}
@@ -137,10 +129,7 @@ func FilterTimeSeries(
 	return tsList, nil
 }
 
-func RetrieveData(
-	project string,
-	token string,
-	baseURL string,
+func (t *TimeSeries) RetrieveData(
 	items *[]dto.DataPointsQueryItem,
 	startTime *string,
 	endTime *string,
@@ -150,8 +139,8 @@ func RetrieveData(
 	includeOutsidePoints *bool,
 	ignoreUnknownIds *bool,
 ) (*dto.DataPointListResponse, error) {
-	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/data/list", project)
-	url := baseURL + endpoint
+	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/data/list", t.Client.ClientConfig.Project)
+	url := t.Client.BaseURL + endpoint
 
 	body := make(map[string]interface{})
 	body["items"] = items
@@ -199,14 +188,17 @@ func RetrieveData(
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/protobuf")
+	for key, value := range t.Client.Headers {
+		if key == "Accept" {
+			req.Header.Set(key, "application/protobuf")
+		} else {
+			req.Header.Set(key, value)
+		}
+	}
 	req.Header.Set("Content-Encoding", "gzip")
-	req.Header.Set("cdf-version", "beta")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

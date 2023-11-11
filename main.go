@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"github.com/evertoncolling/poc-requests-go/pkg/api"
 	"github.com/evertoncolling/poc-requests-go/pkg/dto"
 
-	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/confidential"
 	grob "github.com/MetalBlueberry/go-plotly/graph_objects"
 	"github.com/MetalBlueberry/go-plotly/offline"
 	"github.com/joho/godotenv"
@@ -40,41 +38,24 @@ func main() {
 	cluster := os.Getenv("CDF_CLUSTER")
 	project := os.Getenv("CDF_PROJECT")
 
-	baseURL := fmt.Sprintf("https://%s.cognitedata.com", cluster)
-	scopes := []string{
-		fmt.Sprintf("https://%s.cognitedata.com/.default", cluster),
-		"offline_access",
-		"openid",
-		"profile",
+	credentials := api.AzureADClientCredentials(
+		clientID,
+		clientSecret,
+		tenantID,
+		cluster,
+	)
+	clientConfig := api.ClientConfig{
+		ClientName:  "poc-requests-go",
+		Cluster:     cluster,
+		Project:     project,
+		Credentials: credentials,
 	}
-
-	// confidential clients have a credential, such as a secret or a certificate
-	cred, err := confidential.NewCredFromSecret(clientSecret)
-	if err != nil {
-		log.Fatalf("Error creating cred from secret: %v", err)
-	}
-
-	authorityURI := fmt.Sprintf("https://login.microsoftonline.com/%s", tenantID)
-	confidentialClient, err := confidential.New(authorityURI, clientID, cred)
-	if err != nil {
-		log.Fatalf("Error creating confidential client: %v", err)
-	}
-
-	// Get a token for the app itself
-	result, err := confidentialClient.AcquireTokenSilent(context.TODO(), scopes)
-	if err != nil {
-		// cache miss, authenticate with another AcquireToken... method
-		result, err = confidentialClient.AcquireTokenByCredential(context.TODO(), scopes)
-		if err != nil {
-			log.Fatalf("Error acquiring token: %v", err)
-		}
-	}
-	accessToken := result.AccessToken
+	client := api.NewCogniteClient(clientConfig)
 
 	fmt.Println("### Testing fetching some time series")
 
 	// List time series
-	tsList, err := api.ListTimeSeries(project, accessToken, baseURL, 100, false, "", "", nil, nil, "")
+	tsList, err := client.TimeSeries.List(100, false, "", "", nil, nil, "")
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -85,9 +66,7 @@ func main() {
 	filter := &dto.TimeSeriesFilter{
 		UnitQuantity: "Pressure",
 	}
-	filteredTsList, err := api.FilterTimeSeries(
-		project, accessToken, baseURL, filter, nil, 100, "", "", nil,
-	)
+	filteredTsList, err := client.TimeSeries.Filter(filter, nil, 100, "", "", nil)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -97,7 +76,7 @@ func main() {
 
 	// Fetch the unit catalog
 	fmt.Println("\n### Testing fetching the Unit catalog")
-	unitList, err := api.ListUnits(project, accessToken, baseURL)
+	unitList, err := client.Units.List()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -115,10 +94,7 @@ func main() {
 		},
 	}
 	start := time.Now()
-	dataPoints, err := api.RetrieveData(
-		project,
-		accessToken,
-		baseURL,
+	dataPoints, err := client.TimeSeries.RetrieveData(
 		&items,
 		nil, nil, nil, nil, nil, nil, nil,
 	)
@@ -156,10 +132,7 @@ func main() {
 		},
 	}
 	start = time.Now()
-	dataPoints, err = api.RetrieveData(
-		project,
-		accessToken,
-		baseURL,
+	dataPoints, err = client.TimeSeries.RetrieveData(
 		&items,
 		nil, nil, nil, nil, nil, nil, nil,
 	)
