@@ -12,6 +12,18 @@ const (
 	VERSION = "0.0.1"
 )
 
+type CredentialProvider interface {
+	FetchToken() string
+}
+
+type Token struct {
+	AccessToken string
+}
+
+func (t Token) FetchToken() string {
+	return t.AccessToken
+}
+
 type OAuthClientCredentials struct {
 	ClientId     string
 	ClientSecret string
@@ -33,7 +45,7 @@ func AzureADClientCredentials(
 	}
 }
 
-func (m *OAuthClientCredentials) FetchToken() string {
+func (m OAuthClientCredentials) FetchToken() string {
 	scopes := []string{
 		fmt.Sprintf("https://%s.cognitedata.com/.default", m.Cluster),
 	}
@@ -63,7 +75,7 @@ type ClientConfig struct {
 	ClientName  string
 	Cluster     string
 	Project     string
-	Credentials OAuthClientCredentials
+	Credentials CredentialProvider
 }
 
 type CogniteClient struct {
@@ -76,16 +88,14 @@ type CogniteClient struct {
 }
 
 type TimeSeries struct {
-	Client *CogniteClient // Add a reference to the CogniteClient
+	Client *CogniteClient
 }
 
 type Units struct {
-	Client *CogniteClient // Add a reference to the CogniteClient
+	Client *CogniteClient
 }
 
-func NewCogniteClient(
-	clientConfig ClientConfig,
-) CogniteClient {
+func NewCogniteClient(clientConfig ClientConfig) CogniteClient {
 	baseURL := fmt.Sprintf("https://%s.cognitedata.com", clientConfig.Cluster)
 	accessToken := clientConfig.Credentials.FetchToken()
 	headers := map[string]string{
