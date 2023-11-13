@@ -221,3 +221,77 @@ func (t *TimeSeries) RetrieveData(
 
 	return &dpList, nil
 }
+
+func (t *TimeSeries) RetrieveLatest(
+	items *[]dto.LatestDataPointsQueryItem,
+	ignoreUnknownIds *bool,
+) (*dto.DataPointListResponse, error) {
+	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/data/latest", t.Client.ClientConfig.Project)
+	url := t.Client.BaseURL + endpoint
+
+	body := make(map[string]interface{})
+	body["items"] = items
+
+	// Only add to body if parameters are not nil
+	if ignoreUnknownIds != nil {
+		body["ignoreUnknownIds"] = ignoreUnknownIds
+	}
+
+	// Convert the body to JSON
+	bodyJSON, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compress the JSON body (increase performance slightly)
+	var buf bytes.Buffer
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(bodyJSON); err != nil {
+		return nil, err
+	}
+	if err := gz.Close(); err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", url, &buf)
+	if err != nil {
+		return nil, err
+	}
+
+	for key, value := range t.Client.Headers {
+		if key == "Accept" {
+			req.Header.Set(key, "application/protobuf")
+		} else {
+			req.Header.Set(key, value)
+		}
+	}
+	req.Header.Set("Content-Encoding", "gzip")
+
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			panic(err)
+		}
+	}(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch datapoints: %s", resp.Status)
+	}
+
+	// Read and decode the protobuf response
+	var responseBody bytes.Buffer
+	if _, err := io.Copy(&responseBody, resp.Body); err != nil {
+		return nil, err
+	}
+
+	var dpList dto.DataPointListResponse
+	if err := proto.Unmarshal(responseBody.Bytes(), &dpList); err != nil {
+		return nil, err
+	}
+
+	return &dpList, nil
+}
