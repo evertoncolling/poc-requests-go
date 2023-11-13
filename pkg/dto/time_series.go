@@ -49,3 +49,9 @@ type DataPointsQueryItem struct {
 	IncludeOutsidePoints bool     `json:"includeOutsidePoints,omitempty"`
 	Cursor               string   `json:"cursor,omitempty"`
 }
+
+type LatestDataPointsQueryItem struct {
+	Id         int64  `json:"id,omitempty"`
+	ExternalId string `json:"externalId,omitempty"`
+	Before     string `json:"before,omitempty"`
+}

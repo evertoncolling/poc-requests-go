@@ -83,6 +83,27 @@ func main() {
 	}
 	fmt.Println("Unit Count:", len(unitList.Items))
 
+	// Fetch the latest data points
+	fmt.Println("\n### Latest Data Points")
+	externalIds := []string{"EVE-TI-FORNEBU-01-2", "EVE-TI-FORNEBU-01-3"}
+	var latestDataPointsQueryItems []dto.LatestDataPointsQueryItem
+	for _, externalId := range externalIds {
+		latestDataPointsQueryItems = append(latestDataPointsQueryItems, dto.LatestDataPointsQueryItem{
+			ExternalId: externalId,
+		})
+	}
+	latestDataPoints, err := client.TimeSeries.RetrieveLatest(
+		&latestDataPointsQueryItems,
+		nil,
+	)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	for _, latestDataPoint := range latestDataPoints.Items {
+		fmt.Println(latestDataPoint.ExternalId+":", latestDataPoint.DatapointType)
+	}
+
 	// Get many data points (performance test)
 	fmt.Println("\n### Data Points (performance test)")
 	items := []dto.DataPointsQueryItem{
