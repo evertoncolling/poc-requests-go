@@ -76,7 +76,7 @@ func (t *TimeSeries) Filter(
 	limit int,
 	cursor string,
 	partition string,
-	sort []map[string]interface{},
+	sort []dto.TimeSeriesSortItem,
 ) (dto.TimeSeriesList, error) {
 	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/list", t.Client.ClientConfig.Project)
 	url := t.Client.BaseURL + endpoint
@@ -137,6 +137,7 @@ func (t *TimeSeries) RetrieveData(
 	aggregates *[]string,
 	granularity *string,
 	includeOutsidePoints *bool,
+	timeZone *string,
 	ignoreUnknownIds *bool,
 ) (*dto.DataPointListResponse, error) {
 	endpoint := fmt.Sprintf("/api/v1/projects/%s/timeseries/data/list", t.Client.ClientConfig.Project)
@@ -163,6 +164,9 @@ func (t *TimeSeries) RetrieveData(
 	}
 	if includeOutsidePoints != nil {
 		body["includeOutsidePoints"] = includeOutsidePoints
+	}
+	if timeZone != nil {
+		body["timeZone"] = timeZone
 	}
 	if ignoreUnknownIds != nil {
 		body["ignoreUnknownIds"] = ignoreUnknownIds
@@ -278,8 +282,14 @@ func (t *TimeSeries) RetrieveLatest(
 		}
 	}(resp.Body)
 
+	// Check if status is not OK
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch datapoints: %s", resp.Status)
+		// Read the response body for error message
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch datapoints: %s - error reading response body: %v", resp.Status, err)
+		}
+		return nil, fmt.Errorf("failed to fetch datapoints: %s - %s", resp.Status, string(respBody))
 	}
 
 	// Read and decode the protobuf response

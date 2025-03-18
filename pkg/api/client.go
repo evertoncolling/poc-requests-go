@@ -85,6 +85,7 @@ type CogniteClient struct {
 	Headers      map[string]string
 	TimeSeries   TimeSeries
 	Units        Units
+	DataModeling DataModeling
 }
 
 type TimeSeries struct {
@@ -92,6 +93,10 @@ type TimeSeries struct {
 }
 
 type Units struct {
+	Client *CogniteClient
+}
+
+type DataModeling struct {
 	Client *CogniteClient
 }
 
@@ -114,5 +119,6 @@ func NewCogniteClient(clientConfig ClientConfig) CogniteClient {
 	}
 	client.TimeSeries = TimeSeries{Client: &client}
 	client.Units = Units{Client: &client}
+	client.DataModeling = DataModeling{Client: &client}
 	return client
 }
