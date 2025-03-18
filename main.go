@@ -9,8 +9,6 @@ import (
 	"github.com/evertoncolling/poc-requests-go/pkg/api"
 	"github.com/evertoncolling/poc-requests-go/pkg/dto"
 
-	grob "github.com/MetalBlueberry/go-plotly/graph_objects"
-	"github.com/MetalBlueberry/go-plotly/offline"
 	"github.com/joho/godotenv"
 )
 
@@ -117,7 +115,7 @@ func main() {
 	start := time.Now()
 	dataPoints, err := client.TimeSeries.RetrieveData(
 		&items,
-		nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 	elapsed := time.Since(start)
 	if err != nil {
@@ -140,95 +138,91 @@ func main() {
 	}
 	fmt.Printf("Time taken: %s\n", elapsed)
 
-	// let's try a more reasonable number of data points
-	fmt.Println("\n### Data Points (for plotting)")
-	items = []dto.DataPointsQueryItem{
-		{
-			ExternalId:  "EVE-TI-FORNEBU-01-2",
-			Start:       "300d-ago",
-			End:         "now",
-			Aggregates:  []string{"average"},
-			Granularity: "1h",
-			Limit:       10000,
-		},
-	}
-	start = time.Now()
-	dataPoints, err = client.TimeSeries.RetrieveData(
-		&items,
-		nil, nil, nil, nil, nil, nil, nil,
+	// Fetch data models
+	fmt.Println("\n### Testing fetching some data models")
+	dataModelsList, err := client.DataModeling.ListDataModels(
+		1000, nil, nil, false, true,
 	)
-	elapsed = time.Since(start)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	// Prepare the data for plotting
-	dps = dataPoints.Items[0]
-	aggregateDatapointsType := dps.DatapointType.(*dto.DataPointListItem_AggregateDatapoints)
-	aggregateDatapoints := aggregateDatapointsType.AggregateDatapoints.Datapoints
-	values := make([]float64, 0, len(aggregateDatapoints))
-	timestamps := make([]time.Time, 0, len(aggregateDatapoints))
-	for _, datapoint := range aggregateDatapoints {
-		if datapoint != nil {
-			values = append(values, datapoint.Average)
-			timestamp := time.Unix(0, datapoint.Timestamp*int64(time.Millisecond))
-			timestamps = append(timestamps, timestamp)
+	for _, dataModel := range dataModelsList.Items {
+		fmt.Printf("Space: %s, External ID: %s, Version: %s\n", dataModel.Space, dataModel.ExternalId, dataModel.Version)
+	}
+	fmt.Println("Data Models Count:", len(dataModelsList.Items))
+
+	// Search for CogniteTimeSeries instances
+	fmt.Println("\n### Testing searching for CogniteTimeSeries instances")
+	properties := []string{"name", "description"}
+	nodeList, err := client.DataModeling.InstancesSearch(
+		dto.ViewReference{
+			Type:       "view",
+			Space:      "cdf_cdm",
+			ExternalId: "CogniteTimeSeries",
+			Version:    "v1",
+		},
+		"",
+		nil,
+		&properties,
+		nil,
+		nil,
+		nil,
+		100,
+	)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println("Node List Count:", len(nodeList.Items))
+	fmt.Println()
+
+	for _, node := range nodeList.Items {
+		fmt.Printf("Space: %s, External ID: %s\n", node.Space, node.ExternalId)
+
+		// Navigate through the nested properties structure
+		for _, spaceValue := range node.Properties {
+			// Cast the space value to a map
+			if spaceMap, ok := spaceValue.(map[string]interface{}); ok {
+				// Iterate through the view keys
+				for viewKey, viewProperties := range spaceMap {
+					fmt.Printf("View: %s\n", viewKey)
+
+					// Cast the view properties to a map
+					if propertiesMap, ok := viewProperties.(map[string]interface{}); ok {
+						// Now print each property on a new line with the desired format
+						for propKey, propValue := range propertiesMap {
+							fmt.Printf("- %s: %v\n", propKey, propValue)
+						}
+					}
+				}
+			}
 		}
-	}
-	fmt.Println("Data Points Count:", len(values))
-	fmt.Printf("Time taken: %s\n", elapsed)
-	unit, err := findUnitByExternalId(&unitList, dps.UnitExternalId)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		// Fetch the latest data points for the CogniteTimeSeries instance before now
+		instanceId := dto.InstanceId{
+			Space:      node.Space,
+			ExternalId: node.ExternalId,
+		}
+		var latestDataPointsQueryItems []dto.LatestDataPointsQueryItem
+		latestDataPointsQueryItems = append(latestDataPointsQueryItems, dto.LatestDataPointsQueryItem{
+			InstanceId: &instanceId,
+			Before:     "now",
+		})
+		latestDataPoints, err := client.TimeSeries.RetrieveLatest(
+			&latestDataPointsQueryItems,
+			nil,
+		)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		for _, latestDataPoint := range latestDataPoints.Items {
+			// need to update protobuf to include the instance id
+			fmt.Println("- latest data point:", latestDataPoint.DatapointType)
+		}
+
+		fmt.Println()
 	}
 
-	// Plot the data
-	fig := &grob.Fig{
-		Data: grob.Traces{
-			&grob.Bar{
-				Type: grob.TraceTypeScatter,
-				X:    timestamps,
-				Y:    values,
-				Name: dps.ExternalId,
-			},
-		},
-		Layout: &grob.Layout{
-			Title: &grob.LayoutTitle{
-				Text: fmt.Sprintf("Fetched %d data points - hourly aggregates", len(values)),
-				Font: &grob.LayoutTitleFont{
-					Size: 24.0,
-				},
-			},
-			Font: &grob.LayoutFont{
-				Family: "Roboto",
-				Size:   12,
-				Color:  "black",
-			},
-			Xaxis: &grob.LayoutXaxis{
-				Showspikes:     grob.True,
-				Spikemode:      grob.LayoutXaxisSpikemode("across"),
-				Spikethickness: 1.0,
-				Spikedash:      "solid",
-			},
-			Yaxis: &grob.LayoutYaxis{
-				Title: &grob.LayoutYaxisTitle{
-					Text: fmt.Sprintf("%s [%s]", unit.Quantity, unit.Symbol),
-				},
-			},
-			Spikedistance: -1,
-			Legend: &grob.LayoutLegend{
-				Orientation: grob.LayoutLegendOrientation("h"),
-				Yanchor:     grob.LayoutLegendYanchor("bottom"),
-				Y:           1.02,
-				Xanchor:     grob.LayoutLegendXanchor("right"),
-				X:           1.0,
-			},
-			Showlegend: grob.True,
-			Height:     800,
-		},
-	}
-
-	offline.Show(fig)
 }
