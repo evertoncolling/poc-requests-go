@@ -46,7 +46,8 @@ linters-settings:
   goimports:
     local-prefixes: github.com/evertoncolling/poc-requests-go
   govet:
-    shadow: true
+    enable:
+      - shadow
   revive:
     rules:
       - name: blank-imports
