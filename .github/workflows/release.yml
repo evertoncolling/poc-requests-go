@@ -79,8 +79,8 @@ jobs:
           mv artifacts/*/* .
           
           # Create release notes file
-          cat > release-notes.md << 'EOF'
-Release ${{ github.ref_name }} of poc-requests-go - A Go client library for Cognite Data Fusion (CDF) APIs
+          cat > release-notes.md << EOF
+Release ${GITHUB_REF_NAME} of poc-requests-go - A Go client library for Cognite Data Fusion (CDF) APIs
 
 ## Features
 - **Time Series API** support:
