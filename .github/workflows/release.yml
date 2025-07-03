@@ -39,7 +39,7 @@ jobs:
             output_name="${output_name}.exe"
           fi
           go build -ldflags="-s -w" -o "${output_name}" -v ./
-          
+
           # Create archives
           if [ "${{ matrix.goos }}" = "windows" ]; then
             zip "${output_name%.exe}.zip" "${output_name}"
@@ -77,47 +77,10 @@ jobs:
         run: |
           # Move all binaries to current directory
           mv artifacts/*/* .
-          
-          # Create release notes file
-          cat > release-notes.md << EOF
-Release ${GITHUB_REF_NAME} of poc-requests-go - A Go client library for Cognite Data Fusion (CDF) APIs
 
-## Features
-- **Time Series API** support:
-  - List time series with filtering
-  - Advanced filtering capabilities
-  - Retrieve time series data points
-  - Get latest data points
-- **Units API** support:
-  - Retrieve complete units catalog
-- **Data Modeling API** support:
-  - List data models
-  - Search instances in data models
-  - Execute GraphQL queries
-- Azure credential provider for authentication
-- Comprehensive test suite (unit and integration tests)
-- CI/CD pipeline with GitHub Actions
-
-## Installation
-
-### Using go get
-```bash
-go get github.com/evertoncolling/poc-requests-go
-```
-
-### Using pre-built binaries
-Download the appropriate binary for your platform from the assets below.
-
-## Requirements
-- Go 1.22 or higher (if building from source)
-- Valid CDF credentials (client ID, secret, tenant ID)
-
-## Documentation
-See the [README](https://github.com/evertoncolling/poc-requests-go/blob/main/README.md) for detailed usage examples and API documentation.
-EOF
-          
           # Create release with all binaries
           gh release create ${{ github.ref_name }} \
             --title "Release ${{ github.ref_name }}" \
-            --notes-file release-notes.md \
+            --notes "Initial release of poc-requests-go - A Go client library for Cognite Data Fusion (CDF) APIs. Download pre-built binaries below or install with: go get github.com/evertoncolling/poc-requests-go" \
+            --generate-notes \
             *.tar.gz *.zip
