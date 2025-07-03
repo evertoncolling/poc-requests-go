@@ -127,7 +127,7 @@ func main() {
 	fmt.Println("Data Points External ID:", dps.ExternalId)
 	fmt.Println("Data Points Unit:", dps.UnitExternalId)
 	// not sure if there is a simpler way to get to the data points :)
-	switch v := (*dps).DatapointType.(type) {
+	switch v := dps.DatapointType.(type) {
 	case *dto.DataPointListItem_NumericDatapoints:
 		fmt.Println("Data Points Count:", len(v.NumericDatapoints.Datapoints))
 	case *dto.DataPointListItem_StringDatapoints:
