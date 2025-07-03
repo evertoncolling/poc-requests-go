@@ -61,10 +61,11 @@ func TestIntegration_TimeSeries_List(t *testing.T) {
 	}
 
 	// Verify the structure of returned data
-	for i, ts := range tsList.Items {
+	for i := range tsList.Items {
 		if i >= 3 { // Only check first 3 to avoid too much logging
 			break
 		}
+		ts := &tsList.Items[i] // Use pointer to avoid copying lock
 		t.Logf("Time series %d: ID=%d, ExternalID=%s", i+1, ts.Id, ts.ExternalId)
 
 		if ts.Id == 0 && ts.ExternalId == "" {
@@ -91,10 +92,11 @@ func TestIntegration_TimeSeries_Filter(t *testing.T) {
 
 	t.Logf("Successfully filtered time series, found %d results", len(filteredTsList.Items))
 
-	for i, ts := range filteredTsList.Items {
+	for i := range filteredTsList.Items {
 		if i >= 2 { // Only check first 2
 			break
 		}
+		ts := &filteredTsList.Items[i] // Use pointer to avoid copying lock
 		t.Logf("Filtered time series %d: ID=%d, ExternalID=%s", i+1, ts.Id, ts.ExternalId)
 	}
 }
@@ -321,20 +323,20 @@ func TestIntegration_TimeSeries_RetrieveData_IfAvailable(t *testing.T) {
 	}
 
 	// Get the first time series
-	ts := tsList.Items[0]
-	var externalId string
+	ts := &tsList.Items[0] // Use pointer to avoid copying lock
+	var externalID string
 	if ts.ExternalId != "" {
-		externalId = ts.ExternalId
+		externalID = ts.ExternalId
 	} else {
 		t.Skip("Time series has no external ID, cannot test data retrieval")
 	}
 
-	t.Logf("Testing data retrieval for time series: %s", externalId)
+	t.Logf("Testing data retrieval for time series: %s", externalID)
 
 	// Try to get latest data point
 	latestDataPointsQueryItems := []dto.LatestDataPointsQueryItem{
 		{
-			ExternalId: externalId,
+			ExternalId: externalID,
 		},
 	}
 
