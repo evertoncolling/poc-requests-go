@@ -148,3 +148,57 @@ func (d *DataModeling) InstancesSearch(
 
 	return nodeList, nil
 }
+
+func (d *DataModeling) GraphQLQuery(
+	space string,
+	externalId string,
+	version string,
+	query string,
+	variables map[string]interface{},
+) (dto.GraphQLResponse, error) {
+	endpoint := fmt.Sprintf("/api/v1/projects/%s/userapis/spaces/%s/datamodels/%s/versions/%s/graphql",
+		d.Client.ClientConfig.Project, space, externalId, version)
+	url := d.Client.BaseURL + endpoint
+
+	request := dto.GraphQLRequest{
+		Query:     query,
+		Variables: variables,
+	}
+
+	jsonBody, err := json.Marshal(request)
+	if err != nil {
+		return dto.GraphQLResponse{}, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return dto.GraphQLResponse{}, err
+	}
+
+	for key, value := range d.Client.Headers {
+		req.Header.Set(key, value)
+	}
+
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return dto.GraphQLResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return dto.GraphQLResponse{}, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return dto.GraphQLResponse{}, fmt.Errorf("GraphQL query failed: %s - %s", resp.Status, string(responseBody))
+	}
+
+	var graphQLResponse dto.GraphQLResponse
+	if err := json.Unmarshal(responseBody, &graphQLResponse); err != nil {
+		return dto.GraphQLResponse{}, err
+	}
+
+	return graphQLResponse, nil
+}

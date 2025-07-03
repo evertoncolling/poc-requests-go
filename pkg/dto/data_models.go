@@ -55,3 +55,19 @@ type SearchSort struct {
 	Property  string  `json:"property"`
 	Direction *string `json:"direction,omitempty"`
 }
+
+type GraphQLRequest struct {
+	Query     string                 `json:"query"`
+	Variables map[string]interface{} `json:"variables,omitempty"`
+}
+
+type GraphQLResponse struct {
+	Data   map[string]interface{} `json:"data,omitempty"`
+	Errors []GraphQLError         `json:"errors,omitempty"`
+}
+
+type GraphQLError struct {
+	Message    string                 `json:"message"`
+	Path       []interface{}          `json:"path,omitempty"`
+	Extensions map[string]interface{} `json:"extensions,omitempty"`
+}
