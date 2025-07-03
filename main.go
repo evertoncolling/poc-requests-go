@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -169,7 +170,7 @@ func main() {
 		nil,
 		nil,
 		nil,
-		100,
+		10,
 	)
 	if err != nil {
 		fmt.Println("Error:", err)
@@ -224,5 +225,61 @@ func main() {
 
 		fmt.Println()
 	}
+
+	// GraphQL Query Example
+	fmt.Println("\n=== GraphQL Query Example ===")
+	graphQLQuery := `query MyQuery($nItems: Int) {
+  listCogniteUnit(filter: {space: {eq: "cdf_cdm_units"}}, first: $nItems) {
+    items {
+      tags
+      symbol
+      space
+      source
+      sourceReference
+      quantity
+      name
+      lastUpdatedTime
+      externalId
+      description
+      createdTime
+      aliases
+    }
+  }
+}`
+
+	variables := map[string]interface{}{
+		"nItems": 10,
+	}
+
+	graphQLResponse, err := client.DataModeling.GraphQLQuery(
+		"cdf_cdm",
+		"CogniteCore",
+		"v1",
+		graphQLQuery,
+		variables,
+	)
+	if err != nil {
+		fmt.Println("GraphQL query error:", err)
+		return
+	}
+
+	// Check for GraphQL errors
+	if len(graphQLResponse.Errors) > 0 {
+		fmt.Println("GraphQL errors:")
+		for _, gqlErr := range graphQLResponse.Errors {
+			fmt.Printf("  - %s\n", gqlErr.Message)
+		}
+		return
+	}
+
+	// Print the response as JSON
+	fmt.Println("GraphQL query successful!")
+	fmt.Println("Response data:")
+	jsonData, err := json.MarshalIndent(graphQLResponse.Data, "", "  ")
+	if err != nil {
+		fmt.Println("Error marshaling response to JSON:", err)
+		return
+	}
+	fmt.Println(string(jsonData))
 
 }
